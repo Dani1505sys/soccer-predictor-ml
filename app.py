@@ -70,6 +70,28 @@ if uploaded_file:
 else:
     model = load_model()
 
+
+# --- Ambil data Understat jika ada ---
+st.markdown("### ⚽ Pilih Tim Secara Otomatis (dari Understat)")
+team_stats = None
+if os.path.exists("tim_stats_understat.csv"):
+    team_stats = pd.read_csv("tim_stats_understat.csv")
+    all_teams = sorted(team_stats["team"].unique())
+    selected_home_team = st.selectbox("Pilih Tim Kandang", ["(manual)"] + all_teams, index=0)
+    selected_away_team = st.selectbox("Pilih Tim Tandang", ["(manual)"] + all_teams, index=0)
+
+    if selected_home_team != "(manual)":
+        row = team_stats[team_stats["team"] == selected_home_team].iloc[0]
+        home_xg = row["xg"]
+        home_form = int(row["form_points"])
+    if selected_away_team != "(manual)":
+        row = team_stats[team_stats["team"] == selected_away_team].iloc[0]
+        away_xg = row["xg"]
+        away_form = int(row["form_points"])
+else:
+    st.info("File tim_stats_understat.csv belum ditemukan. Silakan jalankan scraper terlebih dahulu.")
+
+
 home_xg = st.slider("xG Tim Kandang", 0.0, 4.0, 1.8, step=0.1)
 away_xg = st.slider("xG Tim Tandang", 0.0, 4.0, 1.3, step=0.1)
 home_form = st.slider("Form Tim Kandang (poin 5 laga terakhir)", 0, 15, 10)
