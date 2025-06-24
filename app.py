@@ -163,7 +163,15 @@ if batch_file:
     batch_df["Prob_HomeWin"] = batch_probas[:, 2]
     batch_df["Prob_Draw"] = batch_probas[:, 1]
     batch_df["Prob_AwayWin"] = batch_probas[:, 0]
-    st.dataframe(batch_df)
+    
+    if "home_team" in batch_df.columns and "away_team" in batch_df.columns:
+        result_cols = ["home_team", "away_team", "home_xg", "away_xg", "home_form", "away_form", "Prediksi",
+                       "Prob_HomeWin", "Prob_Draw", "Prob_AwayWin"]
+    else:
+        result_cols = ["home_xg", "away_xg", "home_form", "away_form", "Prediksi",
+                       "Prob_HomeWin", "Prob_Draw", "Prob_AwayWin"]
+
+    st.dataframe(batch_df[result_cols])
     batch_df.to_csv("batch_prediksi_output.csv", index=False)
     st.success("✅ Hasil disimpan ke batch_prediksi_output.csv")
 
