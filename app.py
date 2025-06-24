@@ -71,6 +71,22 @@ else:
     model = load_model()
 
 
+
+# Tombol untuk auto-refresh data Understat (hanya lokal)
+st.markdown("### 🔄 Update Data Understat (otomatis lokal)")
+if st.button("🔁 Refresh Data Now"):
+    import subprocess
+    try:
+        result = subprocess.run(["python", "understat_scraper.py"], capture_output=True, text=True)
+        if result.returncode == 0:
+            st.success("✅ Data berhasil di-refresh!")
+        else:
+            st.error("❌ Gagal menjalankan scraper. Cek pesan berikut:")
+            st.code(result.stderr)
+    except Exception as e:
+        st.error(f"⚠️ Error: {e}")
+
+
 # --- Ambil data Understat jika ada ---
 st.markdown("### ⚽ Pilih Tim Secara Otomatis (dari Understat)")
 team_stats = None
