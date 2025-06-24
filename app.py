@@ -166,3 +166,27 @@ if batch_file:
     st.dataframe(batch_df)
     batch_df.to_csv("batch_prediksi_output.csv", index=False)
     st.success("✅ Hasil disimpan ke batch_prediksi_output.csv")
+
+    st.markdown("### 💰 Value Bet Ranking")
+    # Input odds untuk batch (sama semua)
+    odd_home_b = st.number_input("Odds Menang Kandang (Batch)", min_value=1.0, value=1.80, step=0.01, key="odd_home_b")
+    odd_draw_b = st.number_input("Odds Seri (Batch)", min_value=1.0, value=3.50, step=0.01, key="odd_draw_b")
+    odd_away_b = st.number_input("Odds Menang Tandang (Batch)", min_value=1.0, value=4.20, step=0.01, key="odd_away_b")
+
+    batch_df["Value_Home"] = (batch_df["Prob_HomeWin"] * odd_home_b) - 1
+    batch_df["Value_Draw"] = (batch_df["Prob_Draw"] * odd_draw_b) - 1
+    batch_df["Value_Away"] = (batch_df["Prob_AwayWin"] * odd_away_b) - 1
+
+    def highlight_value(val):
+        color = 'background-color: lightgreen' if val > 0 else ''
+        return color
+
+    st.markdown("#### 📋 Daftar Pertandingan dengan Value Bet")
+    st.dataframe(batch_df.style.applymap(highlight_value, subset=["Value_Home", "Value_Draw", "Value_Away"]))
+
+    # Ranking
+    batch_df["Max_Value"] = batch_df[["Value_Home", "Value_Draw", "Value_Away"]].max(axis=1)
+    top_value_df = batch_df.sort_values(by="Max_Value", ascending=False).head(10)
+    st.markdown("#### 🏆 Top 10 Value Bet Tertinggi")
+    st.dataframe(top_value_df[["home_xg", "away_xg", "home_form", "away_form", "Prediksi", "Max_Value"]])
+
