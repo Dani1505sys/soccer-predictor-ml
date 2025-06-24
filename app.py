@@ -46,13 +46,21 @@ def load_model():
         df = load_data()
         return train_model(df)
 
-# --- Aplikasi Streamlit ---
+def prediksi_skor_poisson(xg_home, xg_away, max_goals=5):
+    hasil = []
+    for i in range(max_goals + 1):
+        for j in range(max_goals + 1):
+            prob = poisson.pmf(i, xg_home) * poisson.pmf(j, xg_away)
+            hasil.append({"skor": f"{i}-{j}", "prob": prob})
+    hasil = sorted(hasil, key=lambda x: x['prob'], reverse=True)
+    return hasil[:5]
+
+# --- Streamlit App ---
 st.set_page_config(page_title="Prediksi Sepak Bola ML", layout="centered")
 st.title("⚽ Prediksi Hasil Pertandingan Sepak Bola")
 
 st.markdown("Masukkan statistik pertandingan untuk memprediksi hasil pertandingan (Home Win / Draw / Away Win)")
 
-# Upload dataset
 uploaded_file = st.file_uploader("Upload file dataset CSV kamu (opsional)", type="csv")
 if uploaded_file:
     st.success("Dataset berhasil di-upload. Model akan dilatih ulang.")
@@ -61,7 +69,6 @@ if uploaded_file:
 else:
     model = load_model()
 
-# Input User
 home_xg = st.slider("xG Tim Kandang", 0.0, 4.0, 1.8, step=0.1)
 away_xg = st.slider("xG Tim Tandang", 0.0, 4.0, 1.3, step=0.1)
 home_form = st.slider("Form Tim Kandang (poin 5 laga terakhir)", 0, 15, 10)
@@ -72,13 +79,12 @@ odd_home = st.number_input("Odds Menang Tim Kandang", min_value=1.0, max_value=2
 odd_draw = st.number_input("Odds Seri", min_value=1.0, max_value=20.0, value=3.50, step=0.01)
 odd_away = st.number_input("Odds Menang Tim Tandang", min_value=1.0, max_value=20.0, value=4.20, step=0.01)
 
-
 if st.button("Prediksi!"):
     X_input = np.array([[home_xg, away_xg, home_form, away_form]])
     pred_proba = model.predict_proba(X_input)[0]
     pred_class = model.predict(X_input)[0]
 
-    label_map = {0: "Away Win", 1: "Draw", 2: "Home Win"}  # tergantung encoding
+    label_map = {0: "Away Win", 1: "Draw", 2: "Home Win"}
     st.subheader("📊 Hasil Prediksi")
     st.write(f"**Prediksi Hasil:** {label_map[pred_class]}")
     st.write("**Probabilitas:**")
@@ -86,7 +92,23 @@ if st.button("Prediksi!"):
     st.progress(pred_proba[1], text=f"Draw: {pred_proba[1]:.2%}")
     st.progress(pred_proba[0], text=f"Away Win: {pred_proba[0]:.2%}")
 
-    # Simpan riwayat prediksi
+    st.markdown("### 💰 Value Bet Analysis")
+    value_home = (pred_proba[2] * odd_home) - 1
+    value_draw = (pred_proba[1] * odd_draw) - 1
+    value_away = (pred_proba[0] * odd_away) - 1
+
+    def highlight_value(val):
+        return f":green[{val:.2%}]" if val > 0 else f":red[{val:.2%}]"
+
+    st.write(f"Home Win Value: {highlight_value(value_home)}")
+    st.write(f"Draw Value: {highlight_value(value_draw)}")
+    st.write(f"Away Win Value: {highlight_value(value_away)}")
+
+    st.markdown("**🔢 Prediksi Skor Paling Mungkin (Model Poisson):**")
+    skor_prediksi = prediksi_skor_poisson(home_xg, away_xg)
+    for row in skor_prediksi:
+        st.write(f"Skor {row['skor']} : {row['prob']:.2%}")
+
     new_log = pd.DataFrame([{
         "home_xg": home_xg,
         "away_xg": away_xg,
@@ -105,38 +127,17 @@ if st.button("Prediksi!"):
         log_df = new_log
     log_df.to_csv("prediksi_log.csv", index=False)
 
-    
-    st.markdown("**🔢 Prediksi Skor Paling Mungkin (Model Poisson):**")
-
-    st.markdown("### 💰 Value Bet Analysis")
-    value_home = (pred_proba[2] * odd_home) - 1
-    value_draw = (pred_proba[1] * odd_draw) - 1
-    value_away = (pred_proba[0] * odd_away) - 1
-
-    def highlight_value(val):
-        return f":green[{val:.2%}]" if val > 0 else f":red[{val:.2%}]"
-
-    st.write(f"Home Win Value: {highlight_value(value_home)}")
-    st.write(f"Draw Value: {highlight_value(value_draw)}")
-    st.write(f"Away Win Value: {highlight_value(value_away)}")
-
-    skor_prediksi = prediksi_skor_poisson(home_xg, away_xg)
-    for row in skor_prediksi:
-        st.write(f"Skor {row['skor']} : {row['prob']:.2%}")
-
     st.markdown("_Model: Random Forest (dilatih dari data historis)_")
     st.markdown("_Riwayat prediksi disimpan di 'prediksi_log.csv'_")
 
-from scipy.stats import poisson
-
-def prediksi_skor_poisson(xg_home, xg_away, max_goals=5):
-    hasil = []
-    for i in range(max_goals + 1):
-        for j in range(max_goals + 1):
-            prob = poisson.pmf(i, xg_home) * poisson.pmf(j, xg_away)
-            hasil.append({"skor": f"{i}-{j}", "prob": prob})
-    hasil = sorted(hasil, key=lambda x: x['prob'], reverse=True)
-    return hasil[:5]  # Top 5 skor paling mungkin
+# Riwayat prediksi
+st.markdown("### 🧾 Riwayat Prediksi Sebelumnya")
+if os.path.exists("prediksi_log.csv"):
+    log_df = pd.read_csv("prediksi_log.csv")
+    st.dataframe(log_df)
+    st.download_button("⬇️ Download Riwayat Prediksi", data=log_df.to_csv(index=False), file_name="riwayat_prediksi.csv", mime="text/csv")
+else:
+    st.info("Belum ada riwayat prediksi tersimpan.")
 
 st.markdown("---")
 st.header("📤 Prediksi Massal (Batch)")
