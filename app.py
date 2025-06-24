@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
 import os
+import matplotlib.pyplot as plt
 from scipy.stats import poisson
 
 # --- Load or create dataset ---
@@ -91,6 +92,16 @@ if st.button("Prediksi!"):
     st.progress(pred_proba[2], text=f"Home Win: {pred_proba[2]:.2%}")
     st.progress(pred_proba[1], text=f"Draw: {pred_proba[1]:.2%}")
     st.progress(pred_proba[0], text=f"Away Win: {pred_proba[0]:.2%}")
+
+    # Visualisasi Pie Chart Probabilitas
+    st.markdown("### 📊 Diagram Probabilitas 1X2")
+    fig, ax = plt.subplots()
+    labels = ['Away Win', 'Draw', 'Home Win']
+    colors = ['#FF6961', '#FFD700', '#77DD77']
+    ax.pie(pred_proba, labels=labels, autopct='%1.1f%%', startangle=90, colors=colors)
+    ax.axis('equal')
+    st.pyplot(fig)
+
 
     st.markdown("### 💰 Value Bet Analysis")
     value_home = (pred_proba[2] * odd_home) - 1
